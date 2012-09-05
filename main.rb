@@ -1,3 +1,8 @@
+require "rubygems"
+require "bundler/setup"
+
+require "nokogiri"
+
 data_dir = "data"
 if File.directory?(data_dir) 
 	Dir.foreach(data_dir) { |file| 
@@ -6,6 +11,7 @@ if File.directory?(data_dir)
 			while(line = f.gets)
 				puts line
 			end
+			f.close
 		rescue => e
 			puts "ERROR! Opening file."
 			puts "Exception: #{e}"
