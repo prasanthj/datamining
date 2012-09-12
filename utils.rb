@@ -27,24 +27,20 @@ class Utils
 
 			# reference: http://po-ru.com/diary/fixing-invalid-utf-8-in-ruby-revisited/
 			inp = @@ic.iconv(inp + ' ')[0..-2]
+			out = inp.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.split(/\W+/)
 
-			if KEEP_NUMBERS == true
-				out = inp.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.split(/\W+/).reject {|s| s.empty?}
-			else
-				out = inp.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.split(/\W+/).reject {|s| s.empty? || s.to_i != 0 }
-			end
-
+			out = perform_filtering(out)
+		
+			# if stemming is enable perform stemming
 			if ENABLE_STEMMING == true
 				out = perform_stemming(out)
 			end
 		elsif inp.class == Array
 			inp.delete_if { |x| x == nil }
 			out = inp.map { |val|
-				if KEEP_NUMBERS == true
-					val.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.split(/\W+/).reject {|s| s.empty?}.join(",")
-				else
-					val.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.split(/\W+/).reject {|s| s.empty? || s.to_i != 0}.join(",")
-				end
+				val = val.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.split(/\W+/) 
+
+				val = perform_filtering(val).join(",")
 			}
 
 			if ENABLE_STEMMING == true
@@ -53,6 +49,23 @@ class Utils
 		end
 
 		return out
+	end
+
+	private 
+	def self.perform_filtering(inp)
+		# check if numbers needs to be filtered
+		if FILTER_NUMBERS == false
+			inp = inp.reject {|s| s.empty?}
+		else
+			inp = inp.reject {|s| s.empty? || s.to_i != 0 }
+		end
+
+		# check if short words needs to be filtered
+		if FILTER_WORDS_LESS_THAN > 1
+			inp = inp.reject {|s| s if s.length < FILTER_WORDS_LESS_THAN }
+		end
+
+		inp
 	end
 
 	private

@@ -23,7 +23,7 @@ class TFIDF
 			freqs[k] = v.to_f/doc.length.to_f
 		end
 		
-		freqs
+		freqs.sort_by{|x,y| y}
 	end
 
 	# this function calculates idf scores for a given document corpus
@@ -46,9 +46,14 @@ class TFIDF
 		count.to_f
 	end
 
+	# this method calculates the tf_idf scores for a given document corpus.
+	# tf_idf = tf * idf
+	# refer get_tf and get_idf functions for more description.
+	# the output is also sorted so that words with lower scores 
+	# are arranged at the bottom of the list
 	public
 	def get_tf_idf
-		tf_idf_overall = {}
+		tf_idf_overall = []
 		prepare_indexed_corpus if @indexed_corpus == nil
 		# iterate through docs
 		@corpus.each_with_index do |doc, idx|
@@ -68,7 +73,7 @@ class TFIDF
 				# end
 				tf_idf_doc[term] = rank
 			end
-			tf_idf_overall[idx] = tf_idf_doc
+			tf_idf_overall.push(tf_idf_doc.sort_by {|k,v| v}.reverse!)
 		end
 
 		tf_idf_overall
