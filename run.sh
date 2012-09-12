@@ -1,5 +1,5 @@
 #!/bin/bash
 set -e
-gem install bundle
-bundle install
+setenv GEM_HOME "~/.gem"
+gem install --user-install nokogiri
 ruby main.rb
