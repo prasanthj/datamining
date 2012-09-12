@@ -73,7 +73,7 @@ class TFIDF
 				# end
 				tf_idf_doc[term] = rank
 			end
-			tf_idf_overall.push(tf_idf_doc.sort_by {|k,v| v}.reverse!)
+			tf_idf_overall.push(Hash[*tf_idf_doc.sort_by {|k,v| v}.reverse!.flatten])
 		end
 
 		tf_idf_overall

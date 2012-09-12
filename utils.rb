@@ -111,4 +111,8 @@ class Utils
 	def self.elapsed_time_msec(start, finish)
    		(finish - start) * 1000.0
 	end
+
+	def self.get_top_k_from_hash(h, n) 
+		Hash[h.sort_by { |k,v| -v }[0..n-1]]
+	end
 end

@@ -14,13 +14,10 @@ filter_words_less_than: 4
 # just retain top-k words in feature vector 
 # based on tf-idf ranking
 # any value less than 0 will retain all words
-retain_top_k_words: 10
+retain_top_k_words: 512
 
-
-# if save_output is enabled output_file should 
-# be specified
-save_output: false
-output_file: "./output.txt"
-# if false it will not store the tf-idf scores for each words
-# but the words will be sorted based on tf-idf scores
-persist_tf_idf_score: false
+# if enabled output files are stored in CSV format
+# 1) Transaction data format is stored as output-tdf.csv
+# 2) Data matrix format is stored as output-dmf.csv
+# NOTE: If the file already exists, it will be overwritten
+save_output: true
