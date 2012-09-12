@@ -32,7 +32,7 @@ class Utils
 			out = perform_filtering(out)
 		
 			# if stemming is enable perform stemming
-			if ENABLE_STEMMING == true
+			if $enable_stemming == true
 				out = perform_stemming(out)
 			end
 		elsif inp.class == Array
@@ -43,7 +43,7 @@ class Utils
 				val = perform_filtering(val).join(",")
 			}
 
-			if ENABLE_STEMMING == true
+			if $enable_stemming == true
 				out = perform_stemming(out)
 			end
 		end
@@ -54,15 +54,15 @@ class Utils
 	private 
 	def self.perform_filtering(inp)
 		# check if numbers needs to be filtered
-		if FILTER_NUMBERS == false
+		if $filter_numbers == false
 			inp = inp.reject {|s| s.empty?}
 		else
 			inp = inp.reject {|s| s.empty? || s.to_i != 0 }
 		end
 
 		# check if short words needs to be filtered
-		if FILTER_WORDS_LESS_THAN > 1
-			inp = inp.reject {|s| s if s.length < FILTER_WORDS_LESS_THAN }
+		if $filter_words_less_than > 1
+			inp = inp.reject {|s| s if s.length < $filter_words_less_than }
 		end
 
 		inp

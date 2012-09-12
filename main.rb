@@ -1,9 +1,9 @@
 require "rubygems"
 require "bundler/setup"
+require "yaml"
 
 require './parser.rb'
 require './utils.rb'
-require './config.rb'
 require './tf-idf.rb'
 
 class Main
@@ -43,31 +43,65 @@ class Main
 		end
 	end
 
+	public 
+	def self.run
+		parse_config_file("./config.yml")
+		pretty_print_config()
+		if $save_output == false
+			corpus = []
+			Main.get_xml_map(File.path("data2")).each do |k,v|
+			 	doc_str = v['topics'] + v['contents']
+			 	corpus.push(doc_str.split(","))
+			end
+			tf_idf_corpus = compute_tf_idf(corpus)
+			puts tf_idf_corpus.to_s
+		else
+			begin
+				CSV.open($output_file, "wb") do |csv|
+					# do the writing here
+				end
+			rescue => e
+				puts "Exception: #{e}"
+			end
+		end
+	end
+
+	private 
+	def self.compute_tf_idf(corpus)
+		tfidf = TFIDF.new(corpus)
+		tf_idf_corpus = tfidf.get_tf_idf()
+		if $retain_top_k_words > -1
+			new_tf_idf_corpus = []
+			tf_idf_corpus.each_with_index do |doc|
+				doc = doc.slice(0,$retain_top_k_words-1)
+				new_tf_idf_corpus.push(doc)
+			end
+			tf_idf_corpus = new_tf_idf_corpus
+		end
+		tf_idf_corpus
+	end
+
+	private
+	def self.parse_config_file(yaml_file)
+		@config = YAML.load_file(yaml_file)
+		# set all the keys as global variables
+		@config.each { |key, value| eval "$#{key} = value" }
+	end
+
+	private
+	def self.pretty_print_config
+		puts "CONFIGURATIONS (from config.yml file)"
+		puts "====================================="
+		puts "enable_stemming: " + $enable_stemming.to_s
+		puts "filter_numbers: " + $filter_numbers.to_s
+		puts "filter_words_less_than: " + $filter_words_less_than.to_s
+		puts "retain_top_k_words: " + $retain_top_k_words.to_s
+		puts "save_output: " + $save_output.to_s
+		puts "output_file: " + $output_file.to_s
+		puts "persist_tf_idf_score: " + $persist_tf_idf_score.to_s
+		puts "=====================================\n"
+	end
 end
 
-if SAVE_OUTPUT == false
-	corpus = []
-	Main.get_xml_map(File.path("data2")).each do |k,v|
-	 	doc_str = v['topics'] + v['contents']
-	 	corpus.push(doc_str.split(","))
-	end
-	tfidf = TFIDF.new(corpus)
-	tf_idf_corpus = tfidf.get_tf_idf
-	if RETAIN_TOP_K_WORDS > -1
-		new_tf_idf_corpus = []
-		tf_idf_corpus.each_with_index do |doc|
-			doc = doc.slice(0,RETAIN_TOP_K_WORDS-1)
-			new_tf_idf_corpus.push(doc)
-		end
-		tf_idf_corpus = new_tf_idf_corpus
-	end
-	puts tf_idf_corpus.to_s
-else
-	begin
-		CSV.open(OUTPUT_FILE, "wb") do |csv|
-			# do the writing here
-		end
-	rescue => e
-		puts "Exception: #{e}"
-	end
-end
+# execute the application
+Main.run
