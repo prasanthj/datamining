@@ -1,4 +1,7 @@
+#!/bin/bash
+echo "Switching to bash shell.."
+bash
+echo "Installing dependencies.."
 gem install --user-install nokogiri
-echo "Dependency installation SUCCESSFUL."
-echo "Running program now.."
+echo "Executing program.."
 ruby main.rb
