@@ -1,5 +1,5 @@
 # enable stemming of words in the content
-ENABLE_STEMMING=false
+ENABLE_STEMMING=true
 
 # keep/drop numbers from the contents
 KEEP_NUMBERS=false

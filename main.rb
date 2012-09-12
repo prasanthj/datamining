@@ -4,6 +4,7 @@ require "bundler/setup"
 require './parser.rb'
 require './utils.rb'
 require './config.rb'
+require './tf-idf.rb'
 
 class Main
 	def self.get_xml_map(data_dir)
@@ -28,7 +29,6 @@ class Main
 			doc_map[docid] = content_map
 			docid += 1
 		}
-
 		doc_map
 	end
 
@@ -47,13 +47,13 @@ end
 
 if SAVE_OUTPUT == false
 	corpus = []
-	 Main.get_xml_map(File.path("data1")).each{ |k,v|
-	 	doc = []
-	 	doc.push(v['topics'].split(","))
-	 	doc.push(v['contents'].split(","))
-	 	corpus.push(doc.flatten.compact)
-	 }
-	 Utils.get_tf_idf_score(corpus)
+	Main.get_xml_map(File.path("data2")).each{ |k,v|
+	 	doc_str = v['topics'] + v['contents']
+	 	corpus.push(doc_str.split(","))
+	}
+	#Utils.get_tf_idf_score(corpus).to_s
+	tfidf = TFIDF.new(corpus)
+	puts tfidf.get_tf_idf.to_s
 else
 	begin
 		CSV.open(OUTPUT_FILE, "wb") do |csv|
