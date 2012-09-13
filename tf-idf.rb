@@ -54,7 +54,7 @@ class TFIDF
 	public
 	def get_tf_idf
 		tf_idf_overall = []
-		prepare_indexed_corpus if @indexed_corpus == nil
+		@indexed_corpus = Utils.get_indexed_corpus_with_term_freq(@corpus) if @indexed_corpus == nil
 		# iterate through docs
 		@corpus.each_with_index do |doc, idx|
 			tf_scores = get_tf(doc)
@@ -77,23 +77,6 @@ class TFIDF
 		end
 
 		tf_idf_overall
-	end
-
-	# we need indexed corpus for quickly finding if a word
-	# exisits in a document or not. Since @corpus is an array
-	# of words, its often time consuming to iterate through
-	# all documents just to find if it exists or not. This
-	# information is required while calculating idf score
-	private
-	def prepare_indexed_corpus
-		@indexed_corpus = []
-		@corpus.each do |doc|
-			idx_doc = {}
-			doc.each do |word|
-				idx_doc[word] = 0
-			end
-			@indexed_corpus.push(idx_doc)
-		end
 	end
 
 end

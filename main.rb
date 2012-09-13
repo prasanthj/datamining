@@ -15,24 +15,51 @@ class Main
 
 		# converting input docs to hash
 		xml_map = get_xml_map(File.path(data_dir))
-		corpus = []
+
+		# transaction data corpus will include only the contents of body of each doc
+		# data matrix corpus will include both topics and contents of each doc
+		td_corpus = []
+		dm_corpus = []
 		xml_map.each do |k,v|
 		 	doc_str = v['topics'] + v['contents']
-		 	corpus.push(doc_str.split(","))
+		 	dm_corpus.push(doc_str.split(","))
+		 	td_corpus.push(v['contents'].split(","))
 		end
 		print "Computing tf-idf scores and filtering the contents in document..."
-		tf_idf_corpus = compute_tf_idf(corpus)
+		tf_idf_corpus = compute_tf_idf(td_corpus)
 		puts "[SUCCESS]"
 
 		topics_idx_map = get_topics_term_counts(xml_map)
 		td_format = get_trasaction_data_format(topics_idx_map, tf_idf_corpus)
+		dm_format = get_data_matrix_format(Utils.get_indexed_corpus_with_term_freq(dm_corpus), Utils.get_overall_indexed_corpus(dm_corpus))
 		if $save_output == true	
 			begin
-				outfile = "output-tdf.csv" 
-				print "Storing output in transaction data format to " + outfile + "..."
-				CSV.open(outfile, "wb") do |csv|
+				outfile_tdf= "output-tdf.csv" 
+				print "Storing output in transaction data format to " + outfile_tdf + "..."
+				CSV.open(outfile_tdf, "wb") do |csv|
 					td_format.each do |doc|
 						csv << [doc["docid"], doc["topics"], doc["contents"]]
+					end
+				end
+				puts "[SUCCESS]"
+
+				outfile_dmf="output-dmf.csv"
+				print "Storing output in data matrix format to " + outfile_dmf + "..."
+				CSV.open(outfile_dmf, "wb") do |csv|
+					header = []
+					header.push("docid")
+					dm_format.first.keys.each do |key|
+						header.push(key)
+					end
+
+					csv << header
+					dm_format.each_with_index do |doc, idx|
+						val = []
+						val.push(idx)
+						doc.values.each do |v|
+							val.push(v)
+						end
+						csv << val
 					end
 				end
 				puts "[SUCCESS]"
@@ -58,7 +85,7 @@ class Main
 		# all other fields will be filtered 
 		doc_map = {}
 		print "Normalizing the loaded data..."
-		parsed_doc.each { |k,v|
+		parsed_doc.each do |k,v|
 			content_map = {}
 			content_map['topics'] = Utils.normalize(get_topics(v)).join(",")
 			titles = v.map { |node| Utils.normalize(node.xpath('TEXT/TITLE').text) }
@@ -68,7 +95,7 @@ class Main
 			content_map['contents'] = contents
 			doc_map[docid] = content_map
 			docid += 1
-		}
+		end
 		puts "[SUCCESS]"
 		doc_map
 	end
@@ -98,15 +125,17 @@ class Main
 	def self.compute_tf_idf(corpus)
 		tfidf = TFIDF.new(corpus)
 		tf_idf_corpus = tfidf.get_tf_idf()
-		if $retain_top_k_words > -1
-			new_tf_idf_corpus = []
-			tf_idf_corpus.each_with_index do |doc|
+		
+		new_tf_idf_corpus = []
+		tf_idf_corpus.each_with_index do |doc|
+			if $retain_top_k_words > -1
 				doc = Utils.get_top_k_from_hash(doc, $retain_top_k_words)
-				new_tf_idf_corpus.push(doc)
+			else
+				doc = Utils.get_top_k_from_hash(doc, doc.length)
 			end
-			tf_idf_corpus = new_tf_idf_corpus
+			new_tf_idf_corpus.push(doc)
 		end
-		tf_idf_corpus
+		tf_idf_corpus = new_tf_idf_corpus
 	end
 
 	def self.get_trasaction_data_format(topics_freqs_map, tf_idf_corpus)
@@ -128,6 +157,24 @@ class Main
 			raise "Error! topics_freqs_map length("+topics_freqs_map.size.to_s+") and "\
 				"tf_idf_corpus length("+tf_idf_corpus.size.to_s+") are different."
 		end
+	end
+
+	def self.get_data_matrix_format(doc_corpus, indexed_corpus)
+		dmformat = []
+		indexed_corpus_clean = Utils.perform_corpus_cleaning(indexed_corpus)
+		if $retain_top_k_words > -1
+			indexed_corpus_clean = Utils.get_top_k_from_hash(indexed_corpus_clean, $retain_top_k_words)
+		end
+		
+		doc_corpus.each do |doc|
+			dmap = {}
+			indexed_corpus_clean.each do |k,v|
+				dmap[k] = doc[k]
+			end
+			dmformat.push(dmap)
+		end
+
+		dmformat
 	end
 
 	def self.parse_config_file(yaml_file)

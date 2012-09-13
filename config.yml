@@ -14,6 +14,9 @@ filter_words_less_than: 4
 # just retain top-k words in feature vector 
 # based on tf-idf ranking
 # any value less than 0 will retain all words
+# NOTE: In transaction data format top k words of
+# each document will be retained. In data matrix format
+# top k words of the corpus will be retained.
 retain_top_k_words: 512
 
 # if enabled output files are stored in CSV format
