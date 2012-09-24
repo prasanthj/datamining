@@ -18,32 +18,36 @@ class Utils
 	# - convert multi-line strings to single line string
 	# - lowercase
 	# - strip to remove leading and trailing whitespaces
+	# - replace '-' with '' [Example: "veg-oil" => "vegoil"]
 	# - remove punctuations (?,!.)
 	# - remove numbers (configurable)
 	# - stemming (replace with root words) (configurable)
-	def self.normalize(inp)
+	def self.normalize(inp, isTopic=false)
 		out = nil
 		if inp.class == String
 
 			# reference: http://po-ru.com/diary/fixing-invalid-utf-8-in-ruby-revisited/
 			inp = @@ic.iconv(inp + ' ')[0..-2]
-			out = inp.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.split(/\W+/).reject{|s| s.empty?}
+			out = inp.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.gsub(/\-/,'').split(/\W+/).reject{|s| s.empty?}
 
-			out = perform_filtering(out)
+			if isTopic == false
+				out = perform_filtering(out)
 		
-			# if stemming is enable perform stemming
-			if $enable_stemming == true
-				out = perform_stemming(out)
+				# if stemming is enable perform stemming
+				if $enable_stemming == true
+					out = perform_stemming(out)
+				end
 			end
 		elsif inp.class == Array
 			inp = inp.reject { |x| x == nil || x.empty? }
 			out = inp.map { |val|
-				val = val.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.split(/\W+/) 
-
-				val = perform_filtering(val).join(",")
+				val = val.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.gsub(/\-/,'').split(/\W+/) 
+				if isTopic == false
+					val = perform_filtering(val).join(",")
+				end
 			}
 
-			if $enable_stemming == true
+			if $enable_stemming == true and isTopic == false
 				out = perform_stemming(out)
 			end
 		end
@@ -80,6 +84,8 @@ class Utils
 	# parsing (files with multiple roots)
 	def self.load_files_and_parse(input_dir, root = "")
 		doc = {}
+		nodes = []
+		fileid = 0
 		if File.directory?(input_dir) 
 			Dir.foreach(input_dir) { |file| 
 				begin
@@ -87,10 +93,18 @@ class Utils
 						file = input_dir + "/" + file
 						if( root == "" )
 							fd = File.open(file)
-							doc[file] = Parser.parse_xml_fragments(fd)
+							nodes = Parser.parse_xml_fragments(fd)
+							nodes.each do |node|
+								doc[fileid] = node
+								fileid += 1
+							end
 							fd.close
 						else
-							doc[file] = Parser.parse_xml_fragments(File.read(file), root)
+							nodes = Parser.parse_xml_fragments(File.read(file), root)
+							nodes.each do |node|
+								doc[fileid] = node
+								fileid += 1
+							end
 						end
 					end
 				rescue => e

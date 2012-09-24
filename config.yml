@@ -9,7 +9,7 @@ filter_numbers: true
 
 # filtering feature vector of each doc
 # a value of <=1 will include all words
-filter_words_less_than: 4
+filter_words_less_than: 10
 
 # just retain top-k words in feature vector 
 # based on tf-idf ranking
@@ -17,7 +17,7 @@ filter_words_less_than: 4
 # NOTE: In transaction data format top k words of
 # each document will be retained. In data matrix format
 # top k words of the corpus will be retained.
-retain_top_k_words: 512
+retain_top_k_words: 5
 
 # if enabled output files are stored in CSV format
 # 1) Transaction data format is stored as output-tdf.csv

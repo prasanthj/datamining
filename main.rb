@@ -6,6 +6,12 @@ require './parser.rb'
 require './utils.rb'
 require './tf-idf.rb'
 
+# This file mainly deals with running the application,
+# parsing the input data and writing the output data.
+# After parsing the input data, it uses normalization
+# defined in utils.rb, followed by ranking using tfidf.
+# Finally output is stored in different formats for use
+# with other data mining softwares.
 class Main
 	public
 	def self.run(data_dir, config_file)
@@ -32,8 +38,17 @@ class Main
 		topics_idx_map = get_topics_term_counts(xml_map)
 		td_format = get_trasaction_data_format(topics_idx_map, tf_idf_corpus)
 		dm_format = get_data_matrix_format(Utils.get_indexed_corpus_with_term_freq(dm_corpus), Utils.get_overall_indexed_corpus(dm_corpus))
+		arff_header = get_arff_header(dm_format)
+		arff_data = get_arff_data(dm_format,td_format)
+		write_to_output_files(td_format,dm_format,arff_header)
+	end
+
+	# private methods
+	private 
+	def self.write_to_output_files(td_format,dm_format,arff_header,arff_data)
 		if $save_output == true	
 			begin
+				# writing data in transaction data format
 				outfile_tdf= "output-tdf.csv" 
 				print "Storing output in transaction data format to " + outfile_tdf + "..."
 				CSV.open(outfile_tdf, "wb") do |csv|
@@ -43,6 +58,7 @@ class Main
 				end
 				puts "[SUCCESS]"
 
+				# writing data in data matrix format
 				outfile_dmf="output-dmf.csv"
 				print "Storing output in data matrix format to " + outfile_dmf + "..."
 				CSV.open(outfile_dmf, "wb") do |csv|
@@ -63,14 +79,35 @@ class Main
 					end
 				end
 				puts "[SUCCESS]"
+
+				# writing data in ARFF format (for using it in WEKA)
+				outfile_dmf_arff="output-dmf.arff"
+				outfile_dmf_arff_tmp="output-dmf.arff.tmp"
+				print "Storing output in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff + "..."
+				# there is a little hack here to attach headers to .arff format
+				# ruby CSV doesn't support append mode and so data is written to
+				# a tmp file first. The header is written to output file and the
+				# contents of tmp file is appended to output file. Finally the tmp
+				# file is deleted.
+				CSV.open(outfile_dmf_arff_tmp, "wb") do |csv|
+					arff_data.each do |line|
+						csv << line
+					end
+				end
+				File.open(outfile_dmf_arff, 'w') do |f| 
+					f.write(arff_header)
+					File.open(outfile_dmf_arff_tmp).each_line do |line|
+						f.write(line)
+					end
+				end
+				File.delete(outfile_dmf_arff_tmp)
+				puts "[SUCCESS]"
 			rescue => e
 				puts "Exception: #{e}"
 			end
 		end
 	end
 
-	# private methods
-	private 
 	def self.get_xml_map(data_dir)
 		# get multi-rooted parsed xml document
 		# key is the document name
@@ -87,11 +124,11 @@ class Main
 		print "Normalizing the loaded data..."
 		parsed_doc.each do |k,v|
 			content_map = {}
-			content_map['topics'] = Utils.normalize(get_topics(v)).join(",")
-			titles = v.map { |node| Utils.normalize(node.xpath('TEXT/TITLE').text) }
-			body = v.map { |node| Utils.normalize(node.xpath('TEXT/BODY').text) }
+			content_map['topics'] = Utils.normalize(get_topics(v), true).join(",")
+			titles = Utils.normalize(v.xpath('TEXT/TITLE').text)
+			body = Utils.normalize(v.xpath('TEXT/BODY').text)
 			# combine titles and body arrays
-			contents = titles.zip(body).flatten.compact.join(",")
+			contents = (titles << body).flatten.compact.join(",")
 			content_map['contents'] = contents
 			doc_map[docid] = content_map
 			docid += 1
@@ -100,14 +137,13 @@ class Main
 		doc_map
 	end
 
-	def self.get_topics(value)
-		out = value.map do |node| 
-			if node['TOPICS'] == 'YES'
-				node.xpath('TOPICS/D').map { |val| val.text }.join(",")
-			elsif node['TOPICS'] == 'NO'
-				"Unknown"
-			end
+	def self.get_topics(node)
+		out = "unknown"
+		if node['TOPICS'] == 'YES'
+			out = node.xpath('TOPICS/D').map { |val| val.text }.join(",") 
 		end
+		out = "unknown" if out.empty?
+		out
 	end
 
 	def self.get_topics_term_counts(corpus_map)
@@ -177,6 +213,20 @@ class Main
 		dmformat
 	end
 
+	def self.get_arff_header(dm_format)
+		header = []
+		header << "@RELATION dmf"
+		header << ""
+		header << "@ATTRIBUTE docid NUMERIC"
+		dm_format.first.each do |k,v|
+			header << "@ATTRIBUTE " + k + " NUMERIC"
+		end
+		header << "@ATTRIBUTE topic STRING" 
+		header << ""
+		header << "@DATA\n"
+		header.join("\n")
+	end
+
 	def self.parse_config_file(yaml_file)
 		@config = YAML.load_file(yaml_file)
 		# set all the keys as global variables
@@ -197,4 +247,4 @@ class Main
 end
 
 # execute the application
-Main.run("./data", "./config.yml")
+Main.run("./data1", "./config.yml")
