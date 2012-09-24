@@ -38,9 +38,9 @@ class Main
 		topics_idx_map = get_topics_term_counts(xml_map)
 		td_format = get_trasaction_data_format(topics_idx_map, tf_idf_corpus)
 		dm_format = get_data_matrix_format(Utils.get_indexed_corpus_with_term_freq(dm_corpus), Utils.get_overall_indexed_corpus(dm_corpus))
-		arff_header = get_arff_header(dm_format)
+		arff_header = get_arff_header(dm_format,td_format)
 		arff_data = get_arff_data(dm_format,td_format)
-		write_to_output_files(td_format,dm_format,arff_header)
+		write_to_output_files(td_format,dm_format,arff_header,arff_data)
 	end
 
 	# private methods
@@ -52,8 +52,10 @@ class Main
 				outfile_tdf= "output-tdf.csv" 
 				print "Storing output in transaction data format to " + outfile_tdf + "..."
 				CSV.open(outfile_tdf, "wb") do |csv|
+					header = ["docid", "contents", "topics"]
+					csv << header
 					td_format.each do |doc|
-						csv << [doc["docid"], doc["topics"], doc["contents"]]
+						csv << [doc["docid"], doc["contents"], doc["topics"]]
 					end
 				end
 				puts "[SUCCESS]"
@@ -67,7 +69,7 @@ class Main
 					dm_format.first.keys.each do |key|
 						header.push(key)
 					end
-
+					header.push("topics")
 					csv << header
 					dm_format.each_with_index do |doc, idx|
 						val = []
@@ -75,6 +77,8 @@ class Main
 						doc.values.each do |v|
 							val.push(v)
 						end
+						topics = td_format[idx]['topics']
+						val.push(topics)
 						csv << val
 					end
 				end
@@ -213,7 +217,7 @@ class Main
 		dmformat
 	end
 
-	def self.get_arff_header(dm_format)
+	def self.get_arff_header(dm_format,td_format)
 		header = []
 		header << "@RELATION dmf"
 		header << ""
@@ -221,10 +225,41 @@ class Main
 		dm_format.first.each do |k,v|
 			header << "@ATTRIBUTE " + k + " NUMERIC"
 		end
-		header << "@ATTRIBUTE topic STRING" 
+
+		# populate class labels
+		labels = []
+		td_format.each do |item|
+			topic = item['topics']
+			labels = (labels << topic.split(',')).flatten if topic != 'unknown'	
+		end
+		labels.uniq!
+		class_labels = "{"
+		class_labels+= labels.join(',')
+		class_labels += "}"
+		header << "@ATTRIBUTE topic " + class_labels 
 		header << ""
 		header << "@DATA\n"
 		header.join("\n")
+	end
+
+	def self.get_arff_data(dm_format,td_format)
+		output = []
+		raise 'Size of dm_format data and tf_format data are not equal' unless dm_format.size == td_format.size
+		td_format.each_with_index do |item,idx|
+			topics = item['topics']
+			if topics != "unknown"
+				tokens = topics.split(',')
+				tokens.each do |topic|
+					val = []
+					val.push(idx)
+					val = (val << dm_format[idx].values).flatten
+					val.push(topic)
+					output.push(val)
+				end
+			end
+		end
+
+		output
 	end
 
 	def self.parse_config_file(yaml_file)
@@ -247,4 +282,4 @@ class Main
 end
 
 # execute the application
-Main.run("./data1", "./config.yml")
+Main.run("./data", "./config.yml")
