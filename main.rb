@@ -31,7 +31,7 @@ class Main
 		 	dm_corpus.push(doc_str.split(","))
 		 	td_corpus.push(v['contents'].split(","))
 		end
-		print "Computing tf-idf scores and filtering the contents in document..."
+		print "3) Computing tf-idf scores and filtering the contents in document..."
 		tf_idf_corpus = compute_tf_idf(td_corpus)
 		puts "[SUCCESS]"
 
@@ -50,7 +50,7 @@ class Main
 			begin
 				# writing data in transaction data format
 				outfile_tdf= "output-tdf.csv" 
-				print "Storing output in transaction data format to " + outfile_tdf + "..."
+				print "4) Storing output in transaction data format to " + outfile_tdf + "..."
 				CSV.open(outfile_tdf, "wb") do |csv|
 					header = ["docid", "contents", "topics"]
 					csv << header
@@ -62,7 +62,7 @@ class Main
 
 				# writing data in data matrix format
 				outfile_dmf="output-dmf.csv"
-				print "Storing output in data matrix format to " + outfile_dmf + "..."
+				print "5) Storing output in data matrix format to " + outfile_dmf + "..."
 				CSV.open(outfile_dmf, "wb") do |csv|
 					header = []
 					header.push("docid")
@@ -87,7 +87,7 @@ class Main
 				# writing data in ARFF format (for using it in WEKA)
 				outfile_dmf_arff="output-dmf.arff"
 				outfile_dmf_arff_tmp="output-dmf.arff.tmp"
-				print "Storing output in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff + "..."
+				print "6) Storing output in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff + "..."
 				# there is a little hack here to attach headers to .arff format
 				# ruby CSV doesn't support append mode and so data is written to
 				# a tmp file first. The header is written to output file and the
@@ -116,7 +116,7 @@ class Main
 		# get multi-rooted parsed xml document
 		# key is the document name
 		# value contains the DOM elements
-		print "Loading input files from " + data_dir.to_s + "..."
+		print "1) Loading input files from " + data_dir.to_s + "..."
 		parsed_doc = Utils.load_files_and_parse(data_dir, 'REUTERS')
 		puts "[SUCCESS]"
 		docid = 0
@@ -125,7 +125,7 @@ class Main
 		# value is a map with topics, titles, body fields
 		# all other fields will be filtered 
 		doc_map = {}
-		print "Normalizing the loaded data..."
+		print "2) Normalizing the loaded data..."
 		parsed_doc.each do |k,v|
 			content_map = {}
 			content_map['topics'] = Utils.normalize(get_topics(v), true).join(",")
@@ -282,4 +282,4 @@ class Main
 end
 
 # execute the application
-Main.run("./data", "./config.yml")
+Main.run("./data1", "./config.yml")

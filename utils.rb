@@ -52,6 +52,7 @@ class Utils
 			end
 		end
 
+		out = perform_stop_word_filtering(out)
 		return out
 	end
 
@@ -69,7 +70,27 @@ class Utils
 		inp
 	end
 
-	private
+	def self.perform_stop_word_filtering(out)
+		sw = Hash.new(0)
+		
+		if $enable_stemming == true
+			prepare_stemmed_stopwords
+			out.each_with_index do |item,idx|
+				if @@stemmed_stopwords.include?(item) == true
+					out[idx] = nil 
+				end
+			end
+		else
+			out.each_with_index do |item,idx|
+				if @@stopwords.include?(item) == true
+					out[idx] = nil 
+				end
+			end
+		end
+		out = out.compact
+		out
+	end
+
 	def self.perform_stemming(inp) 
 		if inp.class == String
 			inp.stem
@@ -161,23 +182,31 @@ class Utils
 	end
 
 	def self.perform_corpus_cleaning(tf_idf_corpus)
-		stemmed_stop_words = STOPWORDS
 		if $enable_stemming == true
-			stemmed_stop_words = perform_stemming(STOPWORDS)
+			prepare_stemmed_stopwords
+			@@stemmed_stopwords.each do |word|
+				tf_idf_corpus.delete(word)
+			end
+		else 
+			@@stopwords.each do |word|
+				tf_idf_corpus.delete(word)
+			end
 		end
 		
-		stemmed_stop_words.each do |word|
-			tf_idf_corpus.delete(word)
-		end
-
 		tf_idf_corpus = perform_filtering(tf_idf_corpus)
 		
 		tf_idf_corpus
 	end
-end
+
+	def self.prepare_stemmed_stopwords
+		if @@stemmed_stopwords == nil and $enable_stemming == true
+			@@stemmed_stopwords = perform_stemming(@@stopwords)
+		end
+	end
 
 # stopwords are used for removing top-k words in data matrix representation
-STOPWORDS = %w[
+@@stemmed_stopwords = nil
+@@stopwords = %w[
 a about above across after again against all almost alone along already also
 although always among an and another any anybody anyone anything anywhere apos
 are area areas around as ask asked asking asks at away
@@ -224,7 +253,7 @@ possible present presented presenting presents problem problems put puts
 
 quite quot
 
-rather really right right room rooms
+rather really right right room rooms reuter
 
 said same saw say says second seconds see seem seemed seeming seems sees several
 shall she should show showed showing shows side sides since small smaller
@@ -245,3 +274,5 @@ working works would
 
 year years yet you young younger youngest your yours
 ]
+
+end
