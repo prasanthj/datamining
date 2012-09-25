@@ -282,4 +282,4 @@ class Main
 end
 
 # execute the application
-Main.run("./data1", "./config.yml")
+Main.run("./data", "./config.yml")

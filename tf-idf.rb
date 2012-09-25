@@ -1,4 +1,7 @@
 class TFIDF
+	@indexed_corpus = nil
+	@idfscores = nil
+
 	# the corpus is expected to contain array of array of words
 	# in each doc. array.size should reflect the total number of 
 	# docs in the corpus and each element inside the array should 
@@ -7,9 +10,9 @@ class TFIDF
 	attr_accessor :corpus
 	def initialize(corpus)
 		@corpus = corpus
+		prepare_idf_scores
 	end
 
-	@indexed_corpus = nil
 	# this function calculates tf scores for a given document.
 	# it expects an input array with all words in a doc.
 	# tf value is normalized so that there will be no bias when
@@ -32,18 +35,19 @@ class TFIDF
 	# idf = log10(total_docs_in_corpus/number_of_docs_containing_the_word)
 	private
 	def get_idf term
-		Math.log10( (@corpus.length.to_f) / ( 1.0 + get_term_freq_in_corpus(term) ) )
+		Math.log10( (@corpus.length.to_f) / ( 1.0 + @idfscores[term] ) )
 	end
 
-	private
-	def get_term_freq_in_corpus term
-		count = 0;
+	private 
+	def prepare_idf_scores
+		@indexed_corpus = Utils.get_indexed_corpus_with_term_freq(@corpus) if @indexed_corpus == nil
+		@idfscores = Hash.new(0)
+		keys = []
 		@indexed_corpus.each do |doc|
-			if doc.has_key?(term) == true
-				count += 1
+			doc.each do |k,v|
+				@idfscores[k] += 1
 			end
 		end
-		count.to_f
 	end
 
 	# this method calculates the tf_idf scores for a given document corpus.
