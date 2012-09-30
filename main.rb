@@ -1,10 +1,10 @@
 require "rubygems"
 require "yaml"
-require "csv"
 
 require './parser.rb'
 require './utils.rb'
 require './tf-idf.rb'
+require './io.rb'
 
 # This file mainly deals with running the application,
 # parsing the input data and writing the output data.
@@ -16,8 +16,8 @@ class Main
 	public
 	def self.run(data_dir, config_file)
 		# parsing and printing configurations
-		parse_config_file(config_file)
-		pretty_print_config()
+		IO.parse_config_file(config_file)
+		IO.pretty_print_config()
 
 		# converting input docs to hash
 		xml_map = get_xml_map(File.path(data_dir))
@@ -35,11 +35,14 @@ class Main
 		tf_idf_corpus = compute_tf_idf(td_corpus)
 		puts "[SUCCESS]"
 
+		print "4) Preparing data for various output formats..."
 		topics_idx_map = get_topics_term_counts(xml_map)
 		td_format = get_trasaction_data_format(topics_idx_map, tf_idf_corpus)
 		dm_format = get_data_matrix_format(Utils.get_indexed_corpus_with_term_freq(dm_corpus), Utils.get_overall_indexed_corpus(dm_corpus))
 		arff_header = get_arff_header(dm_format,td_format)
 		arff_data = get_arff_data(dm_format,td_format)
+		puts "[SUCCESS]"
+
 		write_to_output_files(td_format,dm_format,arff_header,arff_data)
 	end
 
@@ -50,61 +53,21 @@ class Main
 			begin
 				# writing data in transaction data format
 				outfile_tdf= "output-tdf.csv" 
-				print "4) Storing output in transaction data format to " + outfile_tdf + "..."
-				CSV.open(outfile_tdf, "wb") do |csv|
-					header = ["docid", "contents", "topics"]
-					csv << header
-					td_format.each do |doc|
-						csv << [doc["docid"], doc["contents"], doc["topics"]]
-					end
-				end
+				output_dir = "output"
+				print "5) Storing output in transaction data format to " + outfile_tdf + "..."
+				IO.write_transactional_data_as_csv(td_format, output_dir, outfile_tdf, true);
 				puts "[SUCCESS]"
 
 				# writing data in data matrix format
 				outfile_dmf="output-dmf.csv"
-				print "5) Storing output in data matrix format to " + outfile_dmf + "..."
-				CSV.open(outfile_dmf, "wb") do |csv|
-					header = []
-					header.push("docid")
-					dm_format.first.keys.each do |key|
-						header.push(key)
-					end
-					header.push("topics")
-					csv << header
-					dm_format.each_with_index do |doc, idx|
-						val = []
-						val.push(idx)
-						doc.values.each do |v|
-							val.push(v)
-						end
-						topics = td_format[idx]['topics']
-						val.push(topics)
-						csv << val
-					end
-				end
+				print "6) Storing output in data matrix format to " + outfile_dmf + "..."
+				IO.write_data_matrix_as_csv(dm_format, td_format, output_dir, outfile_dmf, true);
 				puts "[SUCCESS]"
 
 				# writing data in ARFF format (for using it in WEKA)
 				outfile_dmf_arff="output-dmf.arff"
-				outfile_dmf_arff_tmp="output-dmf.arff.tmp"
-				print "6) Storing output in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff + "..."
-				# there is a little hack here to attach headers to .arff format
-				# ruby CSV doesn't support append mode and so data is written to
-				# a tmp file first. The header is written to output file and the
-				# contents of tmp file is appended to output file. Finally the tmp
-				# file is deleted.
-				CSV.open(outfile_dmf_arff_tmp, "wb") do |csv|
-					arff_data.each do |line|
-						csv << line
-					end
-				end
-				File.open(outfile_dmf_arff, 'w') do |f| 
-					f.write(arff_header)
-					File.open(outfile_dmf_arff_tmp).each_line do |line|
-						f.write(line)
-					end
-				end
-				File.delete(outfile_dmf_arff_tmp)
+				print "7) Storing output in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff + "..."
+				IO.write_data_matrix_as_arff(arff_header, arff_data, output_dir, outfile_dmf_arff, true);
 				puts "[SUCCESS]"
 			rescue => e
 				puts "Exception: #{e}"
@@ -249,37 +212,21 @@ class Main
 			topics = item['topics']
 			if topics != "unknown"
 				tokens = topics.split(',')
-				tokens.each do |topic|
-					val = []
-					val.push(idx)
-					val = (val << dm_format[idx].values).flatten
-					val.push(topic)
-					output.push(val)
+				tokens.each_with_index do |topic,i|
+					if i < 1
+						val = []
+						val.push(idx)
+						val = (val << dm_format[idx].values).flatten
+						val.push(topic)
+						output.push(val)
+					end
 				end
 			end
 		end
 
 		output
 	end
-
-	def self.parse_config_file(yaml_file)
-		@config = YAML.load_file(yaml_file)
-		# set all the keys as global variables
-		@config.each { |key, value| eval "$#{key} = value" }
-	end
-
-	def self.pretty_print_config
-		puts "====================================="
-		puts "CONFIGURATIONS (from config.yml file)"
-		puts "====================================="
-		puts "enable_stemming: " + $enable_stemming.to_s
-		puts "filter_numbers: " + $filter_numbers.to_s
-		puts "filter_words_less_than: " + $filter_words_less_than.to_s
-		puts "retain_top_k_words: " + $retain_top_k_words.to_s
-		puts "save_output: " + $save_output.to_s
-		puts "=====================================\n"
-	end
 end
 
 # execute the application
-Main.run("./data", "./config.yml")
+Main.run("./data1", "./config.yml")
