@@ -44,7 +44,7 @@ class Main
 		arff_data = get_arff_data(dm_format,td_format)
 		puts "[SUCCESS]"
 
-		write_to_output_files(td_format,dm_format,arff_header,arff_data)
+		#write_to_output_files(td_format,dm_format,arff_header,arff_data)
 
 		print "8) Preparing training and testing data for classifiers..."
 		training_set_knn = KNN.get_training_set_knn(dm_format, td_format)
@@ -52,12 +52,15 @@ class Main
 		puts "[SUCCESS]"
 
 		write_classifier_output_files("knn", training_set_knn, testing_set_knn)
+
+		knn = KNN.new("./output/knn/training/100/training_set.csv", true)
+		knn.classify("./output/knn/testing/0/testing_set.csv", true)
 	end
 
 	# private methods
 	private 
 	def self.write_classifier_output_files(classifier_type, training_set, testing_set)
-		output_dir = $output_dir + classifier_type
+		output_dir = $output_dir + "/" + classifier_type
 		print "9) Storing training and testing data sets to " + output_dir + " directory..."
 		IO.write_classifier_output(output_dir, training_set, testing_set)
 		puts "[SUCCESS]"

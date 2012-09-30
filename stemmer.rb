@@ -190,23 +190,9 @@ module Stemmable
 
 end
 
-
-
-#
-# Make this script executable, and send it words on stdin, one per
-# line, and it will output the stemmed versions to stdout.
-#
-# if $0 == __FILE__ then
-#   class String
-#     include Stemmable
-#   end
-
-#   # the String class, and any subclasses of it you might have, now know
-#   # how to stem things.
-
-#   $stdin.each do |word|
-#     puts word.stem
-#   end
-# end
+# include stemming module to string class
+class String
+  include Stemmable
+end
 
 

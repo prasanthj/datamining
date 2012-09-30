@@ -1,10 +1,6 @@
 require "./stemmer.rb"
 require "iconv"
-
-# include stemming module to string class
-class String
-	include Stemmable
-end
+require "benchmark"
 
 class Utils
 
