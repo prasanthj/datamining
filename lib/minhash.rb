@@ -3,9 +3,9 @@ require "murmurhash3"
 module MinHash
 	def minhash
 		output = 0
-		self.each_with_index do |item, idx|
+		self.compact.each_with_index do |item, idx|
 			if item.class == Fixnum
-      			mh = MurmurHash3::V32.int64_hash(item.to_s)
+      			mh = MurmurHash3::V32.int64_hash(item)
       		elsif item.class == String
       			mh = MurmurHash3::V32.str_hash(item.to_s)
       		end

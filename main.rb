@@ -1,5 +1,6 @@
 require "rubygems"
 require "yaml"
+require "benchmark"
 
 require './parser.rb'
 require './utils.rb'
@@ -44,17 +45,27 @@ class Main
 		arff_data = get_arff_data(dm_format,td_format)
 		puts "[SUCCESS]"
 
-		#write_to_output_files(td_format,dm_format,arff_header,arff_data)
+		write_to_output_files(td_format,dm_format,arff_header,arff_data)
 
 		print "8) Preparing training and testing data for classifiers..."
-		training_set_knn = KNN.get_training_set_knn(dm_format, td_format)
-		testing_set_knn = KNN.get_testing_set_knn(dm_format, td_format)
+		training_set_knn = KNN.get_training_set_for_minhash(dm_format, td_format)
+		testing_set_knn = KNN.get_testing_set_for_minhash(dm_format, td_format)
 		puts "[SUCCESS]"
 
 		write_classifier_output_files("knn", training_set_knn, testing_set_knn)
 
-		knn = KNN.new("./output/knn/training/100/training_set.csv", true)
-		knn.classify("./output/knn/testing/0/testing_set.csv", true)
+		knn = nil
+		train_set_loc = "./output/knn/training/100/training_set.csv"
+		test_set_loc = "./output/knn/testing/0/testing_set.csv"
+		puts "10) Running KNN classifier..."
+		puts "Training dataset location: " + train_set_loc
+		puts "Testing dataset location: " + test_set_loc
+		Benchmark.bmbm do |x|
+			x.report("Offline cost: ") { knn = KNN.new(train_set_loc, true, true) }
+			x.report("Online cost: ") { knn.classify_using_minhash(test_set_loc, true) }
+		end
+		# classifying using jaccard coefficient is very slow because O(n^2) complexity 
+		#knn.classify_using_jaccard("./output/knn/testing/0/testing_set.csv", true)
 	end
 
 	# private methods
@@ -240,4 +251,4 @@ class Main
 end
 
 # execute the application
-Main.run("./data1", "./config.yml")
+Main.run("./data", "./config.yml")
