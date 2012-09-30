@@ -5,6 +5,7 @@ require './parser.rb'
 require './utils.rb'
 require './tf-idf.rb'
 require './io.rb'
+require './classifiers/knn.rb'
 
 # This file mainly deals with running the application,
 # parsing the input data and writing the output data.
@@ -44,35 +45,42 @@ class Main
 		puts "[SUCCESS]"
 
 		write_to_output_files(td_format,dm_format,arff_header,arff_data)
+
+		print "8) Preparing training and testing data for classifiers..."
+		training_set_knn = KNN.get_training_set_knn(dm_format, td_format)
+		testing_set_knn = KNN.get_testing_set_knn(dm_format, td_format)
+		puts "[SUCCESS]"
+
+		write_classifier_output_files("knn", training_set_knn, testing_set_knn)
 	end
 
 	# private methods
 	private 
+	def self.write_classifier_output_files(classifier_type, training_set, testing_set)
+		output_dir = $output_dir + classifier_type
+		print "9) Storing training and testing data sets to " + output_dir + " directory..."
+		IO.write_classifier_output(output_dir, training_set, testing_set)
+		puts "[SUCCESS]"
+	end
+
 	def self.write_to_output_files(td_format,dm_format,arff_header,arff_data)
-		if $save_output == true	
-			begin
-				# writing data in transaction data format
-				outfile_tdf= "output-tdf.csv" 
-				output_dir = "output"
-				print "5) Storing output in transaction data format to " + outfile_tdf + "..."
-				IO.write_transactional_data_as_csv(td_format, output_dir, outfile_tdf, true);
-				puts "[SUCCESS]"
+		# writing data in transaction data format
+		outfile_tdf= "output-tdf.csv" 
+		print "5) Storing output in transaction data format to " + outfile_tdf + "..."
+		IO.write_transactional_data_as_csv(td_format, $output_dir, outfile_tdf, true);
+		puts "[SUCCESS]"
 
-				# writing data in data matrix format
-				outfile_dmf="output-dmf.csv"
-				print "6) Storing output in data matrix format to " + outfile_dmf + "..."
-				IO.write_data_matrix_as_csv(dm_format, td_format, output_dir, outfile_dmf, true);
-				puts "[SUCCESS]"
+		# writing data in data matrix format
+		outfile_dmf="output-dmf.csv"
+		print "6) Storing output in data matrix format to " + outfile_dmf + "..."
+		IO.write_data_matrix_as_csv(dm_format, td_format, $output_dir, outfile_dmf, true);
+		puts "[SUCCESS]"
 
-				# writing data in ARFF format (for using it in WEKA)
-				outfile_dmf_arff="output-dmf.arff"
-				print "7) Storing output in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff + "..."
-				IO.write_data_matrix_as_arff(arff_header, arff_data, output_dir, outfile_dmf_arff, true);
-				puts "[SUCCESS]"
-			rescue => e
-				puts "Exception: #{e}"
-			end
-		end
+		# writing data in ARFF format (for using it in WEKA)
+		outfile_dmf_arff="output-dmf.arff"
+		print "7) Storing output in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff + "..."
+		IO.write_data_matrix_as_arff(arff_header, arff_data, $output_dir, outfile_dmf_arff, true);
+		puts "[SUCCESS]"
 	end
 
 	def self.get_xml_map(data_dir)
@@ -207,7 +215,7 @@ class Main
 
 	def self.get_arff_data(dm_format,td_format)
 		output = []
-		raise 'Size of dm_format data and tf_format data are not equal' unless dm_format.size == td_format.size
+		raise(ArgumentError, 'Size of dm_format data and tf_format data are not equal') unless dm_format.size == td_format.size
 		td_format.each_with_index do |item,idx|
 			topics = item['topics']
 			if topics != "unknown"

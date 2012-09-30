@@ -19,8 +19,5 @@ filter_words_less_than: 4
 # top k words of the corpus will be retained.
 retain_top_k_words: 512
 
-# if enabled output files are stored in CSV format
-# 1) Transaction data format is stored as output-tdf.csv
-# 2) Data matrix format is stored as output-dmf.csv
-# NOTE: If the file already exists, it will be overwritten
-save_output: true
+# all output files/folders will be written to this location
+output_dir: "./output"
