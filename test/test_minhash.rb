@@ -22,7 +22,7 @@ class TestMinHash < Test::Unit::TestCase
 
 	def test_two_sets_with_same_order_with_null
 		a = ["hello", nil, nil, "ruby"]
-		b = ["hello", nil, "from", nil]
+		b = ["hello", "world", "from", nil]
 		assert_equal(a.minhash, b.minhash, "Minhash of A: " + a.minhash.to_s + " Minhash of B: " + b.minhash.to_s)
 	end
 

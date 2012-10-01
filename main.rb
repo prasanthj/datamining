@@ -48,24 +48,24 @@ class Main
 		write_to_output_files(td_format,dm_format,arff_header,arff_data)
 
 		print "8) Preparing training and testing data for classifiers..."
-		training_set_knn = KNN.get_training_set_for_minhash(dm_format, td_format)
-		testing_set_knn = KNN.get_testing_set_for_minhash(dm_format, td_format)
+		training_set_knn = KNN.get_training_set(dm_format, td_format)
+		testing_set_knn = KNN.get_testing_set(dm_format, td_format)
 		puts "[SUCCESS]"
 
-		write_classifier_output_files("knn", training_set_knn, testing_set_knn)
+		write_classifier_output_files($classifier, training_set_knn, testing_set_knn)
 
 		knn = nil
 		train_set_loc = "./output/knn/training/100/training_set.csv"
-		test_set_loc = "./output/knn/testing/0/testing_set.csv"
+		# null/empty strings removed from test_data
+		test_data = "bank,billion,price,corp,market,loss,offer,stock,trade,rate,issu,debt,week,note,februari,expect,secur,industri,exchang,propos,januari,loan,sell,quarter,foreign,servic,current,analyst,presid,continu,time,financi,brazil,major,approv,spokesman,earlier,file,commiss,hold,term,recent,payment,fall,receiv,fell,lead,reduc,lower,initi,improv,commun,prefer,proce,convert,creditor,believ,condit,equiti,factor,holder,restructur,poor,brazilian,takeov,pressur,immedi,vice,recommend,fail,determin,unknown"
 		puts "10) Running KNN classifier..."
 		puts "Training dataset location: " + train_set_loc
-		puts "Testing dataset location: " + test_set_loc
+		puts "Testing data: " + test_data
 		Benchmark.bmbm do |x|
 			x.report("Offline cost: ") { knn = KNN.new(train_set_loc, true, true) }
-			x.report("Online cost: ") { knn.classify_using_minhash(test_set_loc, true) }
+			x.report("Online cost(minhas):") { print "Predicted topic: " + knn.classify_using_minhash(test_data, false)}
+			x.report("Online cost(jaccard): ") { print "Predicted topic: " + knn.classify_using_jaccard(test_data, false) }
 		end
-		# classifying using jaccard coefficient is very slow because O(n^2) complexity 
-		#knn.classify_using_jaccard("./output/knn/testing/0/testing_set.csv", true)
 	end
 
 	# private methods
@@ -251,4 +251,4 @@ class Main
 end
 
 # execute the application
-Main.run("./data", "./config.yml")
+Main.run("./data1", "./config.yml")

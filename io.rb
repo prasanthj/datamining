@@ -177,6 +177,8 @@ class IO
 		puts "filter_words_less_than: " + $filter_words_less_than.to_s
 		puts "retain_top_k_words: " + $retain_top_k_words.to_s
 		puts "output_dir: " + $output_dir.to_s
+		puts "classifier: " + $classifier.to_s
+		puts "split: " + $split.to_s
 		puts "=====================================\n"
 	end
 

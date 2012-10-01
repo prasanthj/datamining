@@ -21,3 +21,17 @@ retain_top_k_words: 512
 
 # all output files/folders will be written to this location
 output_dir: "./output"
+
+# type of classifier to use. currently supports only knn
+classifier: "knn"
+
+# if split is "unknown", then all the tuples whose topics are
+# "unknown" will be used as testing set
+# other possible values can be number between 0 to 100 or
+# set of numbers between 0 to 100.
+# Example: if split: [70, 80] then there will be two directories
+# for training set output_dir/knn/training/70, output_dir/knn/training/80
+# and two directories for testing output_dir/knn/testing/30, output_dir/knn/testing/20
+# These files are stored are csv file and hence required further processing
+# if used with other tools.
+split: "unknown"
