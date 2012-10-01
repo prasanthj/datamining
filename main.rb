@@ -61,11 +61,16 @@ class Main
 		puts "10) Running KNN classifier..."
 		puts "Training dataset location: " + train_set_loc
 		puts "Testing data: " + test_data
+		topic_mh = nil
+		topic_jc = nil
 		Benchmark.bmbm do |x|
 			x.report("Offline cost: ") { knn = KNN.new(train_set_loc, true, true) }
-			x.report("Online cost(minhas):") { print "Predicted topic: " + knn.classify_using_minhash(test_data, false)}
-			x.report("Online cost(jaccard): ") { print "Predicted topic: " + knn.classify_using_jaccard(test_data, false) }
+			x.report("Online cost(MinHash):") { topic_mh = knn.classify_using_minhash(test_data, false)}
+			x.report("Online cost(Jaccard): ") { topic_jc = knn.classify_using_jaccard(test_data, false) }
 		end
+		puts ""
+		puts "Topic predicted by KNN classifier using Jaccard Coefficient: " + topic_jc
+		puts "Topic predicted by KNN classifier using MinHash: " + topic_mh
 	end
 
 	# private methods
@@ -251,4 +256,4 @@ class Main
 end
 
 # execute the application
-Main.run("./data1", "./config.yml")
+Main.run("./data", "./config.yml")
