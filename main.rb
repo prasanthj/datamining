@@ -33,89 +33,149 @@ class Main
 		 	dm_corpus.push(doc_str.split(","))
 		 	td_corpus.push(v['contents'].split(","))
 		end
-		print "3) Computing tf-idf scores and filtering the contents in document..."
-		tf_idf_corpus = compute_tf_idf(td_corpus)
-		puts "[SUCCESS]"
 
-		print "4) Preparing data for various output formats..."
+		IO.print_step("Computing tf-idf scores and filtering the contents in document")
+		tf_idf_corpus = compute_tf_idf(td_corpus)
+		IO.print_success
+
+		IO.print_step("Preparing data for various output formats")
 		topics_idx_map = get_topics_term_counts(xml_map)
 		td_format = get_trasaction_data_format(topics_idx_map, tf_idf_corpus)
 		dm_format = get_data_matrix_format(Utils.get_indexed_corpus_with_term_freq(dm_corpus), Utils.get_overall_indexed_corpus(dm_corpus))
 		arff_header = get_arff_header(dm_format,td_format)
 		arff_data = get_arff_data(dm_format,td_format)
-		puts "[SUCCESS]"
-
-		write_to_output_files(td_format,dm_format,arff_header,arff_data)
-
-		print "8) Preparing training and testing data for classifiers..."
-		training_set_knn = KNN.get_training_set(dm_format, td_format)
-		testing_set_knn = KNN.get_testing_set(dm_format, td_format)
-		puts "[SUCCESS]"
-
-		write_classifier_output_files($classifier, training_set_knn, testing_set_knn)
-
-		knn = nil
-		train_set_loc = "./output/knn/training/100/training_set.csv"
-		# null/empty strings removed from test_data
-		test_data = "bank,billion,price,corp,market,loss,offer,stock,trade,rate,issu,debt,week,note,februari,expect,secur,industri,exchang,propos,januari,loan,sell,quarter,foreign,servic,current,analyst,presid,continu,time,financi,brazil,major,approv,spokesman,earlier,file,commiss,hold,term,recent,payment,fall,receiv,fell,lead,reduc,lower,initi,improv,commun,prefer,proce,convert,creditor,believ,condit,equiti,factor,holder,restructur,poor,brazilian,takeov,pressur,immedi,vice,recommend,fail,determin,unknown"
-		puts "10) Running KNN classifier..."
-		puts "Training dataset location: " + train_set_loc
-		puts "Testing data: " + test_data
-		topic_mh = nil
-		topic_jc = nil
-		Benchmark.bmbm do |x|
-			x.report("Offline cost: ") { knn = KNN.new(train_set_loc, true, true) }
-			x.report("Online cost(MinHash):") { topic_mh = knn.classify_using_minhash(test_data, false)}
-			x.report("Online cost(Jaccard): ") { topic_jc = knn.classify_using_jaccard(test_data, false) }
+		arff_data_binary = get_arff_data_binary(dm_format,td_format)
+		if($sample < 1.0) 
+			arff_data_sample = Utils.get_random_sample(arff_data, $sample, $seed)
+			arff_data_binary_sample = Utils.get_random_sample(arff_data, $sample, $seed)
+			arff_data = arff_data_sample
+			arff_data_binary = arff_data_binary_sample
 		end
-		puts ""
-		puts "Topic predicted by KNN classifier using Jaccard Coefficient: " + topic_jc
-		puts "Topic predicted by KNN classifier using MinHash: " + topic_mh
+		IO.print_success
+
+		write_to_output_files(td_format,dm_format,arff_header,arff_data,arff_data_binary)
+
+		if $enable_classifier == true
+			IO.print_step("Preparing training and testing data for classifiers")
+			training_set_knn = KNN.get_training_set(dm_format, td_format)
+			testing_set_knn = KNN.get_testing_set(dm_format, td_format)
+			IO.print_success
+
+			write_classifier_output_files($classifier, training_set_knn, testing_set_knn)
+
+			knn = nil
+			train_set_loc = "./output/knn/training/100/training_set.csv"
+			# null/empty strings removed from test_data
+			test_data = "bank,billion,price,corp,market,loss,offer,stock,trade,rate,issu,debt,week,note,februari,expect,secur,industri,exchang,propos,januari,loan,sell,quarter,foreign,servic,current,analyst,presid,continu,time,financi,brazil,major,approv,spokesman,earlier,file,commiss,hold,term,recent,payment,fall,receiv,fell,lead,reduc,lower,initi,improv,commun,prefer,proce,convert,creditor,believ,condit,equiti,factor,holder,restructur,poor,brazilian,takeov,pressur,immedi,vice,recommend,fail,determin,unknown"
+			IO.print_step("Running KNN classifier")
+			puts "Training dataset location: " + train_set_loc
+			puts "Testing data: " + test_data
+			topic_mh = nil
+			topic_jc = nil
+			Benchmark.bmbm do |x|
+				x.report("Offline cost: ") { knn = KNN.new(train_set_loc, true, true) }
+				x.report("Online cost(MinHash):") { topic_mh = knn.classify_using_minhash(test_data, false)}
+				x.report("Online cost(Jaccard): ") { topic_jc = knn.classify_using_jaccard(test_data, false) }
+			end
+			puts ""
+			puts "Topic predicted by KNN classifier using Jaccard Coefficient: " + topic_jc
+			puts "Topic predicted by KNN classifier using MinHash: " + topic_mh
+		end
+
+
+		cluster_in_file = "./output/output-dmf-binary.arff"
+		cluster_out_file = "./output/cluster.arff"
+		if(File.exists?(cluster_out_file))
+			IO.print_step("Computing the quality of clustering output")
+			quality = Utils.get_cluster_quality(cluster_in_file, cluster_out_file)
+			IO.print_success
+
+			IO.pretty_print_clusters(quality)
+			print "Overall quality of this clustering arrangement: "
+			overallEnt = 0
+			quality.each do |item|
+				overallEnt += item["weighted-entropy"]
+			end
+			puts overallEnt.to_s
+		else
+			puts "Use " + cluster_in_file + " in WEKA for clustering."
+			puts "Save the cluster output to " + cluster_out_file + " and "\
+			"rerun this application with -cq option (./run.sh -cq) to find the quality of the clusters generated."
+		end
+	end
+
+	public 
+	def self.run_cluster_quality
+		cluster_in_file = "./output/output-dmf-binary.arff"
+		cluster_out_file = "./output/cluster.arff"
+		if(File.exists?(cluster_out_file))
+			IO.print_step("Computing the quality of clustering output")
+			quality = Utils.get_cluster_quality(cluster_in_file, cluster_out_file)
+			IO.print_success
+
+			IO.pretty_print_clusters(quality)
+			print "Overall quality of this clustering arrangement: "
+			overallEnt = 0
+			quality.each do |item|
+				overallEnt += item["weighted-entropy"]
+			end
+			puts overallEnt.to_s
+		else
+			puts "Use " + cluster_in_file + " in WEKA for clustering."
+			puts "Save the cluster output to " + cluster_out_file + " and "\
+			"rerun this application with -cq option (./run.sh -cq) to find the quality of the clusters generated."
+		end
 	end
 
 	# private methods
 	private 
 	def self.write_classifier_output_files(classifier_type, training_set, testing_set)
 		output_dir = $output_dir + "/" + classifier_type
-		print "9) Storing training and testing data sets to " + output_dir + " directory..."
+		IO.print_step("Storing training and testing data sets to " + output_dir + " directory")
 		IO.write_classifier_output(output_dir, training_set, testing_set)
-		puts "[SUCCESS]"
+		IO.print_success
 	end
 
-	def self.write_to_output_files(td_format,dm_format,arff_header,arff_data)
+	def self.write_to_output_files(td_format,dm_format,arff_header,arff_data,arff_data_binary)
 		# writing data in transaction data format
 		outfile_tdf= "output-tdf.csv" 
-		print "5) Storing output in transaction data format to " + outfile_tdf + "..."
+		IO.print_step("Storing output in transaction data format to " + outfile_tdf)
 		IO.write_transactional_data_as_csv(td_format, $output_dir, outfile_tdf, true);
-		puts "[SUCCESS]"
+		IO.print_success
 
 		# writing data in data matrix format
 		outfile_dmf="output-dmf.csv"
-		print "6) Storing output in data matrix format to " + outfile_dmf + "..."
+		IO.print_step("Storing output in data matrix format to " + outfile_dmf)
 		IO.write_data_matrix_as_csv(dm_format, td_format, $output_dir, outfile_dmf, true);
-		puts "[SUCCESS]"
+		IO.print_success
 
 		# writing data in ARFF format (for using it in WEKA)
 		outfile_dmf_arff="output-dmf.arff"
-		print "7) Storing output in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff + "..."
+		IO.print_step("Storing data matrix output with term frequencies in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff)
 		IO.write_data_matrix_as_arff(arff_header, arff_data, $output_dir, outfile_dmf_arff, true);
-		puts "[SUCCESS]"
+		IO.print_success
+
+		# writing data in ARFF format (for using it in WEKA)
+		outfile_dmf_arff="output-dmf-binary.arff"
+		IO.print_step("Storing data matrix output with term existence(binary) in Attribute-Relation File Format (ARFF) to " + outfile_dmf_arff)
+		IO.write_data_matrix_as_arff(arff_header, arff_data_binary, $output_dir, outfile_dmf_arff, true);
+		IO.print_success
 	end
 
 	def self.get_xml_map(data_dir)
 		# get multi-rooted parsed xml document
 		# key is the document name
 		# value contains the DOM elements
-		print "1) Loading input files from " + data_dir.to_s + "..."
+		IO.print_step("Loading input files from " + data_dir.to_s)
 		parsed_doc = Utils.load_files_and_parse(data_dir, 'REUTERS')
-		puts "[SUCCESS]"
+		IO.print_success
 		docid = 0
 
 		# this map will store docid as key
 		# value is a map with topics, titles, body fields
 		# all other fields will be filtered 
 		doc_map = {}
-		print "2) Normalizing the loaded data..."
+		IO.print_step("Normalizing the loaded data")
 		parsed_doc.each do |k,v|
 			content_map = {}
 			content_map['topics'] = Utils.normalize(get_topics(v), true).join(",")
@@ -127,7 +187,7 @@ class Main
 			doc_map[docid] = content_map
 			docid += 1
 		end
-		puts "[SUCCESS]"
+		IO.print_success
 		doc_map
 	end
 
@@ -253,7 +313,41 @@ class Main
 
 		output
 	end
+
+	def self.get_arff_data_binary(dm_format,td_format)
+		output = []
+		raise(ArgumentError, 'Size of dm_format data and tf_format data are not equal') unless dm_format.size == td_format.size
+		td_format.each_with_index do |item,idx|
+			topics = item['topics']
+			if topics != "unknown"
+				tokens = topics.split(',')
+				tokens.each_with_index do |topic,i|
+					if i < 1
+						val = []
+						val.push(idx)
+						binvals = dm_format[idx].values
+						binvals.map! do |item| 
+							if item.zero?
+								0
+							else
+								1
+							end
+						end
+						val = (val << binvals).flatten
+						val.push(topic)
+						output.push(val)
+					end
+				end
+			end
+		end
+
+		output
+	end
 end
 
 # execute the application
-Main.run("./data", "./config.yml")
+if ARGV.size != 0
+	Main.run_cluster_quality if ARGV[0] == "-cq"
+else
+	Main.run("./data", "./config.yml")
+end

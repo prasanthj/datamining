@@ -35,3 +35,9 @@ classifier: "knn"
 # These files are stored are csv file and hence required further processing
 # if used with other tools.
 split: "unknown"
+
+enable_classifier: false
+
+# used for hierarchical clustering where only a sample set of feature vector is required
+sample: 0.2
+seed: 10

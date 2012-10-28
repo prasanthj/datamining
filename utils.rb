@@ -1,6 +1,7 @@
 require "./stemmer.rb"
 require "iconv"
 require "benchmark"
+require "multimap"
 
 class Utils
 
@@ -198,6 +199,91 @@ class Utils
 		if @@stemmed_stopwords == nil and $enable_stemming == true
 			@@stemmed_stopwords = perform_stemming(@@stopwords)
 		end
+	end
+
+	# given the input weka file in arff format and cluster output
+	# file in arff format, this function will compute the 
+	# quality of the cluster using weighted entropy
+	def self.get_cluster_quality(arff_in_file, arff_out_file)
+		clusters = get_last_attribute(arff_out_file)
+		topics = get_last_attribute(arff_in_file)
+		output = []
+		if (clusters.size != topics.size)
+			raise(ArgumentError, "Input and ouput ARFF file should have same number of feature vectors. 
+				Input vectors: " + topics.size.to_s + " Output vectors: " + clusters.size.to_s) 
+		end
+
+		clusternames = clusters.uniq
+		clustermap = Multimap.new
+		clusters.each_with_index do |v,idx|
+			clustermap[v] = topics[idx]
+		end
+
+		clusternames.each do |name|
+			result = {}
+			result["name"] = name
+			result["size"] = clustermap[name].size
+			ent = get_cluster_entropy(clustermap[name])
+			went = (clustermap[name].size.to_f/clusters.size.to_f) * ent
+			result["entropy"] = ent
+			result["weighted-entropy"] = went
+			output.push(result)
+		end
+
+		output
+	end
+
+	public
+	def self.get_random_sample(data, sample, seed = 100)
+		result = []
+		dataSize = data.length
+		totalSize = sample * dataSize
+		idx = 0
+		r = Random.new(seed)
+		while idx < totalSize
+			rint = r.rand(0..dataSize)
+			result.push(data[rint])
+			idx = idx + 1
+		end
+
+		result
+	end
+
+	private 
+	def self.get_cluster_entropy(cluster)
+		totalsize = cluster.size
+		itemCountMap = Hash.new(0)
+		overallEnt = 0
+		cluster.each do |item|
+			itemCountMap[item] += 1
+		end
+
+		itemCountMap.each do |k,v|
+			entropy = -(v.to_f/totalsize.to_f) * (Math.log(v.to_f/totalsize.to_f, 2))
+			overallEnt = overallEnt.to_f + entropy.to_f
+		end
+
+		overallEnt
+	end
+
+	private 
+	def self.get_last_attribute(arff_file)
+		raise(ArgumentError, "Input arff file doesn't exist") if File.exists?(arff_file) == false
+		result = []
+		File.open(arff_file, "r").each_line do |line|
+			val = nil
+			begin
+				val = Integer(line.chr)
+			rescue Exception => e
+				next
+			end
+
+			if(val != nil)
+				result.push(line.split(",").last.chomp)
+			end
+		end
+
+		result
 	end
 
 # stopwords are used for removing top-k words in data matrix representation

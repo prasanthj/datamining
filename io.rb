@@ -167,6 +167,24 @@ class IO
 		@config.each { |key, value| eval "$#{key} = value" }
 	end
 
+	def self.print_step(msg)
+		print "- " + msg + "..."
+	end
+
+	def self.print_success
+		puts "[SUCCESS]"
+	end
+
+	def self.pretty_print_clusters(clusters)
+		clusters.each do |c|
+			c.each do |k,v|
+				print k + ":"
+				puts v.to_s
+			end
+			puts ""
+		end
+	end
+
 	public
 	def self.pretty_print_config
 		puts "====================================="
@@ -179,6 +197,8 @@ class IO
 		puts "output_dir: " + $output_dir.to_s
 		puts "classifier: " + $classifier.to_s
 		puts "split: " + $split.to_s
+		puts "sample: " + $sample.to_s
+		puts "seed: " + $seed.to_s
 		puts "=====================================\n"
 	end
 
