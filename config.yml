@@ -39,5 +39,5 @@ split: "unknown"
 enable_classifier: false
 
 # used for hierarchical clustering where only a sample set of feature vector is required
-sample: 0.2
+sample: 1.0
 seed: 10

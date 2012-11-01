@@ -208,6 +208,7 @@ class Utils
 		clusters = get_last_attribute(arff_out_file)
 		topics = get_last_attribute(arff_in_file)
 		output = []
+		# if number of rows doesn't match in in and out file then return error
 		if (clusters.size != topics.size)
 			raise(ArgumentError, "Input and ouput ARFF file should have same number of feature vectors. 
 				Input vectors: " + topics.size.to_s + " Output vectors: " + clusters.size.to_s) 
@@ -215,6 +216,7 @@ class Utils
 
 		clusternames = clusters.uniq
 		clustermap = Multimap.new
+		# put all topics belonging to a cluster in a multimap with key as cluster name
 		clusters.each_with_index do |v,idx|
 			clustermap[v] = topics[idx]
 		end
@@ -233,6 +235,8 @@ class Utils
 		output
 	end
 
+	# this is used for saving a random sample of output data. sample size
+	# and seed value are configurable through config.yml
 	public
 	def self.get_random_sample(data, sample, seed = 100)
 		result = []
@@ -249,15 +253,20 @@ class Utils
 		result
 	end
 
+	# this function computes the entropy of a given cluster
 	private 
 	def self.get_cluster_entropy(cluster)
 		totalsize = cluster.size
 		itemCountMap = Hash.new(0)
 		overallEnt = 0
+
+		# count the number of unique topics within the cluster
 		cluster.each do |item|
 			itemCountMap[item] += 1
 		end
 
+		# compute entropy of each topic and compute summation of 
+		# overall entropy
 		itemCountMap.each do |k,v|
 			entropy = -(v.to_f/totalsize.to_f) * (Math.log(v.to_f/totalsize.to_f, 2))
 			overallEnt = overallEnt.to_f + entropy.to_f

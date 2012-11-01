@@ -11,3 +11,4 @@ Datamining Course Assignment
 - KNN Classifier
 - Jaccard Coefficent
 - MinHash (uses MurmurHash3 gem)
+- Finding entropy based clustering quality 

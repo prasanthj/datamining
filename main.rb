@@ -100,14 +100,12 @@ class Main
 		else
 			puts "Use " + cluster_in_file + " in WEKA for clustering."
 			puts "Save the cluster output to " + cluster_out_file + " and "\
-			"rerun this application with -cq option (./run.sh -cq) to find the quality of the clusters generated."
+			"rerun this application with -cq option (./run.sh -cq <input-arff-file> <output-arff-file>) to find the quality of the clusters generated."
 		end
 	end
 
 	public 
-	def self.run_cluster_quality
-		cluster_in_file = "./output/output-dmf-binary.arff"
-		cluster_out_file = "./output/cluster.arff"
+	def self.run_cluster_quality(cluster_in_file, cluster_out_file)
 		if(File.exists?(cluster_out_file))
 			IO.print_step("Computing the quality of clustering output")
 			quality = Utils.get_cluster_quality(cluster_in_file, cluster_out_file)
@@ -122,8 +120,8 @@ class Main
 			puts overallEnt.to_s
 		else
 			puts "Use " + cluster_in_file + " in WEKA for clustering."
-			puts "Save the cluster output to " + cluster_out_file + " and "\
-			"rerun this application with -cq option (./run.sh -cq) to find the quality of the clusters generated."
+			puts "Save the cluster output to as arff file and "\
+			"rerun this application with -cq option (./run.sh -cq <in-file> <out-file>) to find the quality of the clusters generated."
 		end
 	end
 
@@ -347,7 +345,18 @@ end
 
 # execute the application
 if ARGV.size != 0
-	Main.run_cluster_quality if ARGV[0] == "-cq"
+	cluster_in_file = "./output/output-dmf-binary.arff"
+	cluster_out_file = "./output/cluster.arff"
+
+	if ARGV.size == 3
+		cluster_in_file = ARGV[1]
+		cluster_out_file = ARGV[2]
+	else
+		puts "usage: ./run.sh -cq <input-arff-file> <output-arff-file>"
+		exit -1
+	end
+			
+	Main.run_cluster_quality(cluster_in_file, cluster_out_file) if ARGV[0] == "-cq"
 else
 	Main.run("./data", "./config.yml")
 end
