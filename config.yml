@@ -17,10 +17,12 @@ filter_words_less_than: 4
 # NOTE: In transaction data format top k words of
 # each document will be retained. In data matrix format
 # top k words of the corpus will be retained.
-retain_top_k_words: 512
+retain_top_k_words: 256
 
 # all output files/folders will be written to this location
 output_dir: "./output"
+
+enable_classifier: false
 
 # type of classifier to use. currently supports only knn
 classifier: "knn"
@@ -36,8 +38,11 @@ classifier: "knn"
 # if used with other tools.
 split: "unknown"
 
-enable_classifier: false
-
+enable_clustering: false
 # used for hierarchical clustering where only a sample set of feature vector is required
 sample: 1.0
 seed: 10
+
+enable_association_mining: true
+minsup: 10
+confidence: 30

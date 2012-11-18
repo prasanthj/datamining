@@ -7,6 +7,7 @@ require './utils.rb'
 require './tf-idf.rb'
 require './io.rb'
 require './classifiers/knn.rb'
+require './association/ar.rb'
 
 # This file mainly deals with running the application,
 # parsing the input data and writing the output data.
@@ -34,17 +35,30 @@ class Main
 		 	td_corpus.push(v['contents'].split(","))
 		end
 
+		# ranking the bag of words based on tf-idf scores
 		IO.print_step("Computing tf-idf scores and filtering the contents in document")
 		tf_idf_corpus = compute_tf_idf(td_corpus)
 		IO.print_success
 
 		IO.print_step("Preparing data for various output formats")
+		# get the term counts of topics
 		topics_idx_map = get_topics_term_counts(xml_map)
+
+		# get transaction data format
 		td_format = get_trasaction_data_format(topics_idx_map, tf_idf_corpus)
+
+		# get data matrix format
 		dm_format = get_data_matrix_format(Utils.get_indexed_corpus_with_term_freq(dm_corpus), Utils.get_overall_indexed_corpus(dm_corpus))
+
+		# prepare data for arff format. get arff header and data
 		arff_header = get_arff_header(dm_format,td_format)
 		arff_data = get_arff_data(dm_format,td_format)
+
+		# get data matrix format with binary representation of term counts
 		arff_data_binary = get_arff_data_binary(dm_format,td_format)
+
+		# if only a sample of data is required to be stored then get random sample
+		# of data 
 		if($sample < 1.0) 
 			arff_data_sample = Utils.get_random_sample(arff_data, $sample, $seed)
 			arff_data_binary_sample = Utils.get_random_sample(arff_data, $sample, $seed)
@@ -53,6 +67,7 @@ class Main
 		end
 		IO.print_success
 
+		# write all the different output formats to output files
 		write_to_output_files(td_format,dm_format,arff_header,arff_data,arff_data_binary)
 
 		if $enable_classifier == true
@@ -83,24 +98,50 @@ class Main
 		end
 
 
-		cluster_in_file = "./output/output-dmf-binary.arff"
-		cluster_out_file = "./output/cluster.arff"
-		if(File.exists?(cluster_out_file))
-			IO.print_step("Computing the quality of clustering output")
-			quality = Utils.get_cluster_quality(cluster_in_file, cluster_out_file)
+		if $enable_clustering == true
+			cluster_in_file = "./output/output-dmf-binary.arff"
+			cluster_out_file = "./output/cluster.arff"
+			if(File.exists?(cluster_out_file))
+				IO.print_step("Computing the quality of clustering output")
+				quality = Utils.get_cluster_quality(cluster_in_file, cluster_out_file)
+				IO.print_success
+
+				IO.pretty_print_clusters(quality)
+				print "Overall quality of this clustering arrangement: "
+				overallEnt = 0
+				quality.each do |item|
+					overallEnt += item["weighted-entropy"]
+				end
+				puts overallEnt.to_s
+			else
+				puts "Use " + cluster_in_file + " in WEKA for clustering."
+				puts "Save the cluster output to " + cluster_out_file + " and "\
+				"rerun this application with -cq option (./run.sh -cq <input-arff-file> <output-arff-file>) to find the quality of the clusters generated."
+			end
+		end
+
+		if $enable_association_mining == true
+			IO.print_step("Preparing training and testing data for association rule mining")
+			ar = AR.new($minsup, $confidence)
+			training_set_ar = ar.get_training_set(td_format)
+			testing_set_ar = ar.get_testing_set(td_format)
 			IO.print_success
 
-			IO.pretty_print_clusters(quality)
-			print "Overall quality of this clustering arrangement: "
-			overallEnt = 0
-			quality.each do |item|
-				overallEnt += item["weighted-entropy"]
-			end
-			puts overallEnt.to_s
-		else
-			puts "Use " + cluster_in_file + " in WEKA for clustering."
-			puts "Save the cluster output to " + cluster_out_file + " and "\
-			"rerun this application with -cq option (./run.sh -cq <input-arff-file> <output-arff-file>) to find the quality of the clusters generated."
+			write_association_rules_input_files(training_set_ar, testing_set_ar)
+
+			IO.print_step("Generating association rules")
+			rules = ar.generate_association_rules($output_dir + "/ar/training.txt", $output_dir + "/ar/apriori.out")
+			IO.print_success
+
+			test_data = $output_dir + "/ar/testing.txt"
+			IO.print_step("Classifying test data from " + test_data + " using association rules")
+			classified_test_data = ar.classify_based_on_association(rules, test_data)
+			IO.print_success
+
+			classified_test_outfile = $output_dir + "/ar/classified_testdata.csv"
+			IO.print_step("Writing classified testing data output to " + classified_test_outfile)
+			IO.write_rule_based_classification_output(classified_test_outfile, classified_test_data)
+			IO.print_success
 		end
 	end
 
@@ -131,6 +172,13 @@ class Main
 		output_dir = $output_dir + "/" + classifier_type
 		IO.print_step("Storing training and testing data sets to " + output_dir + " directory")
 		IO.write_classifier_output(output_dir, training_set, testing_set)
+		IO.print_success
+	end
+
+	def self.write_association_rules_input_files(training_set, testing_set)
+		output_dir = $output_dir + "/ar"
+		IO.print_step("Storing training and testing data sets to " + output_dir + " directory")
+		IO.write_association_rules_dataset(output_dir, training_set, testing_set)
 		IO.print_success
 	end
 
@@ -358,5 +406,5 @@ if ARGV.size != 0
 			
 	Main.run_cluster_quality(cluster_in_file, cluster_out_file) if ARGV[0] == "-cq"
 else
-	Main.run("./data", "./config.yml")
+	Main.run("./data1", "./config.yml")
 end

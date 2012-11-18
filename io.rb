@@ -132,6 +132,51 @@ class IO
 		end
 	end
 
+	def self.write_association_rules_dataset(output_dir, training_set, testing_set)
+		begin
+			if training_set == nil or training_set.empty?
+				raise(ArgumentError, "Training set is nill")
+			end
+
+			train_file = output_dir + "/training.txt" 
+			test_file = output_dir + "/testing.txt" 
+			test_and_create_dir(output_dir)
+
+			File.open(train_file, 'w') do |file|
+				training_set.each do |item|
+					file.write(item)
+					file.write("\n")
+				end
+			end
+
+			File.open(test_file, 'w') do |file|
+				testing_set.each do |item|
+					file.write(item)
+					file.write("\n")
+				end
+			end
+		rescue Exception => e
+			puts "Exception: #{e}"
+			puts e.backtrace
+		end
+	end
+
+	def self.write_rule_based_classification_output(outputfile, classified_out, write_header=true)
+		begin
+			CSV.open(outputfile, "wb") do |csv|
+				header = []
+				header.push("contents")
+				header.push("topics")
+				csv << header if write_header
+
+				classified_out.each do |item|
+					csv << [item["contents"].join(","), item["topics"]]
+				end
+			end			
+		rescue Exception => e
+		end
+	end
+
 	private 
 	def self.write_classifier_output_impl(train_dir, test_dir, training_set, testing_set, split_percent)
 		if split_percent < 100
@@ -195,10 +240,15 @@ class IO
 		puts "filter_words_less_than: " + $filter_words_less_than.to_s
 		puts "retain_top_k_words: " + $retain_top_k_words.to_s
 		puts "output_dir: " + $output_dir.to_s
+		puts "enable_classifier: " + $enable_classifier.to_s
 		puts "classifier: " + $classifier.to_s
 		puts "split: " + $split.to_s
+		puts "enable_clustering: " + $enable_clustering.to_s 
 		puts "sample: " + $sample.to_s
 		puts "seed: " + $seed.to_s
+		puts "enable_association_mining: " + $enable_association_mining.to_s
+		puts "minsup: " + $minsup.to_s
+		puts "confidence: " + $confidence.to_s
 		puts "=====================================\n"
 	end
 

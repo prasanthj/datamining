@@ -28,25 +28,27 @@ class Utils
 			out = inp.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.gsub(/\-/,'').split(/\W+/).reject{|s| s.empty?}
 
 			if isTopic == false
-				out = perform_filtering(out)
-		
 				# if stemming is enable perform stemming
 				if $enable_stemming == true
 					out = perform_stemming(out)
 				end
+
+				# filter numbers or words based on length specified in config
+				out = perform_filtering(out)
 			end
 		elsif inp.class == Array
 			inp = inp.reject { |x| x == nil || x.empty? }
 			out = inp.map { |val|
 				val = val.gsub(/(?<!\n)\n(?!\n)/,' ').downcase.strip.gsub(/\-/,'').split(/\W+/) 
 				if isTopic == false
+					# we need to stem before filtering
+					if $enable_stemming == true
+						val = perform_stemming(val)
+					end
+					
 					val = perform_filtering(val).join(",")
 				end
 			}
-
-			if $enable_stemming == true and isTopic == false
-				out = perform_stemming(out)
-			end
 		end
 
 		out = perform_stop_word_filtering(out)
